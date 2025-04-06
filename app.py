@@ -56,17 +56,17 @@ def few_shot_example(prompt):
 # Dynamic suggestions for general prompts
 def get_optimized_prompt(prompt):
     if prompt.strip():
-        with st.spinner("Gemini is thinking... Optimizing your prompt..."):
-            try:
-                # Use few-shot learning examples to optimize the prompt
-                examples = few_shot_example(prompt)
-                # Generate the optimized prompt response using Gemini 2.0 Flash
-                optimized_response = model.generate_content(examples)
-                return optimized_response.text
-            except Exception as e:
-                st.error(f"Gemini API Error: {str(e)}")
-                return ""
+        try:
+            # Use few-shot learning examples to optimize the prompt
+            examples = few_shot_example(prompt)
+            # Generate the optimized prompt response using Gemini 2.0 Flash
+            optimized_response = model.generate_content(examples)
+            return optimized_response.text
+        except Exception as e:
+            st.error(f"Gemini API Error: {str(e)}")
+            return ""
     return ""
+
 
 # Generate responses for both unoptimized and optimized prompts
 def generate_responses(unoptimized_prompt, optimized_prompt):
@@ -83,34 +83,47 @@ def generate_responses(unoptimized_prompt, optimized_prompt):
         return None, None
 
 # When Submit is clicked, process the prompt and show both responses
+# Checkbox to decide whether to optimize the prompt
+optimize = st.checkbox("Optimize my prompt before submission", value=True)
+
+# When Submit is clicked, process the prompt
 if submit_clicked:
     if not user_prompt.strip():
         st.warning("Please enter a prompt.")
     else:
-        # Show a loading spinner while both processes are running
-        with st.spinner("Gemini is thinking... This may take a few moments."):
-            # Get optimized prompt
-            optimized_prompt = get_optimized_prompt(user_prompt)
-            unoptimized_prompt = user_prompt
+        with st.spinner("Gemini is thinking..."):
+
+            if optimize:
+                # Get optimized prompt
+                optimized_prompt = get_optimized_prompt(user_prompt)
+                unoptimized_prompt = user_prompt
+                
+                # Generate both responses
+                unoptimized_response, optimized_response = generate_responses(unoptimized_prompt, optimized_prompt)
+
+                # Side-by-side comparison layout
+                col1, col2 = st.columns([1, 1])
+
+                with col1:
+                    st.subheader("📝 Unoptimized Prompt")
+                    st.text_area("Original Prompt", unoptimized_prompt, height=150, disabled=True)
+                    st.subheader("🧾 Response")
+                    st.write(unoptimized_response)
+
+                with col2:
+                    st.subheader("📝 Optimized Prompt")
+                    st.text_area("Optimized Prompt", optimized_prompt, height=150, disabled=True)
+                    st.subheader("🧾 Response")
+                    st.write(optimized_response)
+
+                # Optimization Insight
+                st.subheader("🔍 Optimization Insights")
+                st.write("**Why this optimization works**: The optimized prompt refines your language to be more **specific**, **clear**, and **focused**, which helps the AI produce more accurate and relevant responses.")
             
-            # Generate both responses
-            unoptimized_response, optimized_response = generate_responses(unoptimized_prompt, optimized_prompt)
-        
-        # Show the results
-        col1, col2 = st.columns([1, 1])
-        
-        with col1:
-            st.subheader("📝 Unoptimized Prompt")
-            st.text_area("Original Prompt", unoptimized_prompt, height=150, disabled=True)
-            st.subheader("🧾 Response")
-            st.write(unoptimized_response)
-        
-        with col2:
-            st.subheader("📝 Optimized Prompt")
-            st.text_area("Optimized Prompt", optimized_prompt, height=150, disabled=True)
-            st.subheader("🧾 Response")
-            st.write(optimized_response)
+            else:
+                # No optimization — just generate response to the original prompt
+                response = model.generate_content(user_prompt)
+                
             
-        # Actionable Insights
-        st.subheader("🔍 Optimization Insights")
-        st.write(f"**Why this optimization works**: The optimized prompt refines your language to be more **specific**, **clear**, and **focused**, which helps the AI produce more accurate and relevant responses.")
+                st.subheader("🧾 Response")
+                st.write(response.text)
